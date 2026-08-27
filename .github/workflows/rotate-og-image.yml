@@ -1,0 +1,35 @@
+name: Rotate OG image
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rotate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick a random image from images/info and update og:image
+        run: |
+          files=(images/info/*.png)
+          pick="${files[$RANDOM % ${#files[@]}]}"
+          new_url="https://info.creq.kr/${pick}"
+          sed -i "s#<meta property=\"og:image\" content=\"[^\"]*\">#<meta property=\"og:image\" content=\"${new_url}\">#" index.html
+          echo "Selected: ${new_url}"
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- index.html; then
+            git add index.html
+            git commit -m "Rotate og:image"
+            git push
+          else
+            echo "No change, skipping commit"
+          fi
